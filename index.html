@@ -76,10 +76,51 @@
     opacity:0.4; pointer-events:none; transition:opacity .3s,transform .1s; white-space:nowrap; }
   #enter.on { opacity:1; pointer-events:auto; }
   #enter:active { transform:scale(0.97); }
-  #reopen { position:fixed; right:20px; top:16px; z-index:8; background:rgba(20,10,12,0.7);
-    color:#f2e9d8; border:1px solid rgba(201,162,74,0.4); font-size:12.5px; font-weight:500;
-    padding:7px 14px; border-radius:999px; cursor:pointer; display:none; -webkit-tap-highlight-color:transparent; }
   .hidden { display:none !important; }
+
+  /* ---------- Auth ---------- */
+  #authOverlay { position:fixed; inset:0; z-index:40; display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(circle at 50% 30%, #3a1a20 0%, #1a0c0f 80%); padding:20px; }
+  #authCard { width:min(94vw,380px); background:rgba(30,16,20,0.9); border:1px solid rgba(201,162,74,0.4);
+    border-radius:20px; padding:28px 24px; color:#f2e9d8; box-shadow:0 30px 80px rgba(0,0,0,0.5); }
+  #authCard h1 { font-size:22px; font-weight:700; margin-bottom:18px; text-align:center; }
+  .authTabs { display:flex; gap:8px; margin-bottom:16px; }
+  .authTab { flex:1; text-align:center; padding:8px; border-radius:999px; font-size:13px; font-weight:600;
+    cursor:pointer; background:rgba(255,255,255,0.05); color:rgba(242,233,216,0.6); -webkit-tap-highlight-color:transparent; }
+  .authTab.active { background:linear-gradient(180deg,#e8c766,#c9a24a); color:#2a1418; }
+  .authInput { width:100%; background:rgba(255,255,255,0.06); border:1px solid rgba(201,162,74,0.3);
+    border-radius:10px; color:#f2e9d8; font-size:14px; padding:11px 12px; margin-bottom:10px; outline:none; }
+  .authInput:focus { border-color:#e8c766; }
+  #authErr { color:#ff8f8f; font-size:12.5px; min-height:16px; margin-bottom:8px; text-align:center; }
+  #authSubmit { width:100%; background:linear-gradient(180deg,#e8c766,#c9a24a); color:#2a1418; border:none;
+    font-size:15px; font-weight:700; padding:12px; border-radius:999px; cursor:pointer; margin-top:4px; }
+  #authSubmit:disabled { opacity:0.5; pointer-events:none; }
+
+  /* ---------- Top bar / browse ---------- */
+  #topBar { position:fixed; right:20px; top:16px; z-index:8; display:none; gap:8px; align-items:center; }
+  #topBar.show { display:flex; }
+  .topBtn { background:rgba(20,10,12,0.7); color:#f2e9d8; border:1px solid rgba(201,162,74,0.4);
+    font-size:12.5px; font-weight:500; padding:7px 14px; border-radius:999px; cursor:pointer; white-space:nowrap;
+    -webkit-tap-highlight-color:transparent; }
+  #meName { color:#e8c766; font-size:12.5px; font-weight:600; padding:0 4px; }
+  #quotaInfo { color:rgba(242,233,216,0.6); font-size:11px; padding:0 4px; white-space:nowrap; }
+  #browse { position:fixed; inset:0; z-index:35; display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(circle at 50% 30%, #3a1a20 0%, #1a0c0f 80%); padding:20px; }
+  #browse.hidden2 { display:none; }
+  #browseCard { width:min(94vw,480px); max-height:80vh; display:flex; flex-direction:column;
+    background:rgba(30,16,20,0.9); border:1px solid rgba(201,162,74,0.4); border-radius:20px; padding:24px; color:#f2e9d8; }
+  #browseCard h1 { font-size:20px; font-weight:700; margin-bottom:14px; text-align:center; }
+  #browseList { flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; min-height:40px; }
+  .browseItem { display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.05);
+    border-radius:10px; padding:12px 14px; cursor:pointer; }
+  .browseItem:hover { background:rgba(201,162,74,0.15); }
+  .browseItem span.cnt { font-size:11.5px; opacity:0.6; }
+  #browseClose { margin-top:14px; background:transparent; border:1px solid rgba(242,233,216,0.3); color:#f2e9d8;
+    font-size:12.5px; padding:9px 16px; border-radius:999px; cursor:pointer; }
+  #backToMine { position:fixed; left:20px; top:16px; z-index:8; display:none; background:rgba(20,10,12,0.7);
+    color:#f2e9d8; border:1px solid rgba(201,162,74,0.4); font-size:12.5px; font-weight:500;
+    padding:7px 14px; border-radius:999px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+  #backToMine.show { display:block; }
 </style>
 </head>
 <body>
@@ -91,12 +132,43 @@
 </div>
 <div id="turn"><div class="tbtn" id="tLeft">↺</div><div class="tbtn" id="tRight">↻</div></div>
 <div id="zoom"><img id="zoomImg" alt="확대된 그림"><div id="zoomCap"></div><button id="zoomClose">닫기</button></div>
-<button id="reopen">＋ 그림 관리</button>
+
+<div id="topBar">
+  <span id="meName"></span>
+  <span id="quotaInfo"></span>
+  <button class="topBtn" id="reopen">＋ 그림 관리</button>
+  <button class="topBtn" id="browseBtn">다른 갤러리 구경</button>
+  <button class="topBtn" id="logoutBtn">로그아웃</button>
+</div>
+<button id="backToMine">← 내 갤러리로</button>
+
+<div id="authOverlay">
+  <div id="authCard">
+    <h1>나만의 <span class="gold">미술관</span></h1>
+    <div class="authTabs">
+      <div class="authTab active" id="tabLogin">로그인</div>
+      <div class="authTab" id="tabSignup">회원가입</div>
+    </div>
+    <input class="authInput" id="authNick" type="text" placeholder="닉네임 (회원가입 시)" style="display:none;" maxlength="20">
+    <input class="authInput" id="authEmail" type="email" placeholder="이메일" autocomplete="username">
+    <input class="authInput" id="authPw" type="password" placeholder="비밀번호 (6자 이상)" autocomplete="current-password">
+    <div id="authErr"></div>
+    <button id="authSubmit">로그인</button>
+  </div>
+</div>
+
+<div id="browse" class="hidden2">
+  <div id="browseCard">
+    <h1>다른 사람의 미술관</h1>
+    <div id="browseList"></div>
+    <button id="browseClose">닫기</button>
+  </div>
+</div>
 
 <div id="start">
   <div id="card">
     <h1>나만의 <span class="gold">미술관</span></h1>
-    <p>각 칸에 사진을 올리고 그 아래에 작품 이름을 적으세요.<br>이 브라우저에 자동 저장되어, 다시 열어도 그대로 남아요. (JPG·PNG 권장 · 최대 30점)</p>
+    <p>각 칸에 사진을 올리고 그 아래에 작품 이름을 적으세요.<br>클라우드에 저장되어, 어느 기기에서 로그인해도 그대로 남아요. (JPG·PNG 권장 · 최대 30점)</p>
     <div id="slots"></div>
     <div id="bar">
       <div id="count">0 / 30점</div>
@@ -108,6 +180,7 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
 /**
  * @license
@@ -118,54 +191,45 @@
 
 </script>
 <script>
-// ================= 나만의 미술관 (30칸 업로드 + 이름) =================
+// ================= 나만의 미술관 (로그인 + 클라우드 저장) =================
 const MAX_PHOTOS = 30;
-// slots[i] = { src, aspect, name } or null
+// slots[i] = { src, path, aspect, name } or null
 const slots = new Array(MAX_PHOTOS).fill(null);
 
-// ---------- Persistent storage (IndexedDB) ----------
-const DB_NAME='myGalleryDB', STORE='gallery', KEY='slots-v1';
-function openDB(){
-  return new Promise((res,rej)=>{
-    const rq=indexedDB.open(DB_NAME,1);
-    rq.onupgradeneeded=()=>{ rq.result.createObjectStore(STORE); };
-    rq.onsuccess=()=>res(rq.result);
-    rq.onerror=()=>rej(rq.error);
-  });
-}
-async function saveSlots(){
-  try{
-    const db=await openDB();
-    await new Promise((res,rej)=>{
-      const tx=db.transaction(STORE,'readwrite');
-      tx.objectStore(STORE).put(slots,KEY);
-      tx.oncomplete=res; tx.onerror=()=>rej(tx.error);
-    });
-  }catch(e){ console.warn('저장 실패:',e); }
-}
-async function loadSlots(){
-  try{
-    const db=await openDB();
-    const data=await new Promise((res,rej)=>{
-      const tx=db.transaction(STORE,'readonly');
-      const rq=tx.objectStore(STORE).get(KEY);
-      rq.onsuccess=()=>res(rq.result); rq.onerror=()=>rej(rq.error);
-    });
-    if(Array.isArray(data)){ for(let i=0;i<MAX_PHOTOS;i++) slots[i]=data[i]||null; return true; }
-  }catch(e){ console.warn('불러오기 실패:',e); }
-  return false;
-}
-async function clearSaved(){
-  try{ const db=await openDB();
-    await new Promise((res)=>{ const tx=db.transaction(STORE,'readwrite'); tx.objectStore(STORE).delete(KEY); tx.oncomplete=res; });
-  }catch(e){}
+// ---------- Supabase ----------
+// TODO: Supabase 콘솔(supabase.com) > 프로젝트 > Project Settings > API 에서 발급받은 값으로 교체하세요.
+const SUPABASE_URL = "https://gqwskbidcodngedosaxb.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdxd3NrYmlkY29kbmdlZG9zYXhiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyMDc5NTEsImV4cCI6MjEwMjc4Mzk1MX0.TuvGg0zmmZs4Iqfjbw2_0M0sS0VLjVgR-qxH0jNCXM0";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const BUCKET = 'gallery-images';
+
+let currentUid = null, viewingUid = null, isAdmin = false;
+
+function dataURLToBlob(dataURL){
+  const [header, base64] = dataURL.split(',');
+  const mime = header.match(/:(.*?);/)[1];
+  const bin = atob(base64);
+  const arr = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
+  return new Blob([arr], {type:mime});
 }
 
+// ---------- DOM refs ----------
 const slotsEl=document.getElementById('slots');
 const countEl=document.getElementById('count');
 const enterBtn=document.getElementById('enter');
 const reopenBtn=document.getElementById('reopen');
 const startEl=document.getElementById('start');
+const backToMine=document.getElementById('backToMine');
+const topBar=document.getElementById('topBar');
+const meName=document.getElementById('meName');
+const quotaInfo=document.getElementById('quotaInfo');
+const logoutBtn=document.getElementById('logoutBtn');
+const authOverlay=document.getElementById('authOverlay');
+const tabLogin=document.getElementById('tabLogin'), tabSignup=document.getElementById('tabSignup');
+const authNick=document.getElementById('authNick'), authEmail=document.getElementById('authEmail'), authPw=document.getElementById('authPw');
+const authErr=document.getElementById('authErr'), authSubmit=document.getElementById('authSubmit');
+const browseOverlay=document.getElementById('browse'), browseList=document.getElementById('browseList');
 
 // build 30 slots
 const hiddenInput=document.createElement('input');
@@ -186,40 +250,160 @@ function makeSlot(i){
     activeSlot=i; hiddenInput.value=''; hiddenInput.click();
   });
   box.querySelector('.slotDel').addEventListener('click',e=>{
-    e.stopPropagation(); slots[i]=null;
+    e.stopPropagation();
+    const path=slots[i] && slots[i].path;
+    slots[i]=null;
     box.classList.remove('filled');
     box.querySelector('.slotPlus').style.display='';
     const im=box.querySelector('img'); if(im) im.remove();
     const nm=slotsEl.querySelectorAll('.slotName')[i]; if(nm) nm.value='';
     updateCount(); saveSlots();
+    if(path){ sb.storage.from(BUCKET).remove([path]).catch(()=>{}); }
   });
   slot.appendChild(box); slot.appendChild(name); slotsEl.appendChild(slot);
 }
 for(let i=0;i<MAX_PHOTOS;i++) makeSlot(i);
 
-// restore previously saved gallery (if any)
+// restore UI from the currently loaded `slots` array
 function restoreUI(){
   const boxes=slotsEl.querySelectorAll('.slotBox');
   const names=slotsEl.querySelectorAll('.slotName');
-  slots.forEach((s,i)=>{
-    if(!s) return;
-    const box=boxes[i];
-    box.classList.add('filled');
-    box.querySelector('.slotPlus').style.display='none';
-    let im=box.querySelector('img'); if(!im){ im=document.createElement('img'); box.insertBefore(im,box.querySelector('.slotDel')); }
-    im.src=s.src;
-    if(names[i]) names[i].value=s.name||'';
+  boxes.forEach((box,i)=>{
+    const s=slots[i];
+    box.classList.toggle('filled', !!s);
+    box.querySelector('.slotPlus').style.display = s ? 'none' : '';
+    let im=box.querySelector('img');
+    if(s){
+      if(!im){ im=document.createElement('img'); box.insertBefore(im,box.querySelector('.slotDel')); }
+      im.src=s.src;
+    } else if(im){ im.remove(); }
+    if(names[i]) names[i].value = s ? (s.name||'') : '';
   });
   updateCount();
 }
-loadSlots().then(found=>{ if(found) restoreUI(); });
+
+// ---------- Cloud persistence (Supabase: Postgres + Storage) ----------
+async function loadGallery(uid){
+  for(let i=0;i<MAX_PHOTOS;i++) slots[i]=null;
+  try{
+    const { data, error } = await sb.from('galleries').select('slots').eq('uid', uid).maybeSingle();
+    if(error) throw error;
+    const arr = (data && data.slots) || [];
+    for(let i=0;i<MAX_PHOTOS;i++) slots[i]=arr[i]||null;
+  }catch(e){ console.warn('불러오기 실패:',e); }
+}
+let saveTimer=null;
+function saveSlots(){
+  if(!currentUid) return;
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>{
+    sb.from('galleries').upsert({
+      uid: currentUid,
+      slots: slots.map(s=> s ? {src:s.src, path:s.path||null, aspect:s.aspect, name:s.name||''} : null),
+      updated_at: new Date().toISOString()
+    }).then(({error})=>{ if(error) console.warn('저장 실패:',error); });
+  }, 500);
+}
+
+// ---------- Auth ----------
+let authMode='login';
+function setAuthMode(m){
+  authMode=m; authErr.textContent='';
+  tabLogin.classList.toggle('active', m==='login'); tabSignup.classList.toggle('active', m==='signup');
+  authNick.style.display = m==='signup' ? '' : 'none';
+  authSubmit.textContent = m==='signup' ? '회원가입' : '로그인';
+}
+tabLogin.addEventListener('click',()=>setAuthMode('login'));
+tabSignup.addEventListener('click',()=>setAuthMode('signup'));
+function authErrMsg(msg){
+  if(!msg) return '오류가 발생했어요. 다시 시도해 주세요.';
+  if(msg.includes('already registered')) return '이미 가입된 이메일이에요.';
+  if(msg.includes('Invalid login credentials')) return '이메일 또는 비밀번호가 틀렸어요.';
+  if(msg.includes('Password should be at least')) return '비밀번호는 6자 이상이어야 해요.';
+  if(msg.includes('valid email') || msg.includes('invalid format')) return '이메일 형식이 올바르지 않아요.';
+  if(msg.includes('Email not confirmed')) return '이메일 인증 메일을 확인한 뒤 로그인해 주세요.';
+  return msg;
+}
+authSubmit.addEventListener('click', async ()=>{
+  const email=authEmail.value.trim(), pw=authPw.value, nick=authNick.value.trim();
+  authErr.textContent=''; authSubmit.disabled=true;
+  try{
+    if(authMode==='signup'){
+      if(!nick){ authErr.textContent='닉네임을 입력해 주세요.'; authSubmit.disabled=false; return; }
+      const { data, error } = await sb.auth.signUp({ email, password: pw });
+      if(error) throw error;
+      const uid = data.user && data.user.id;
+      if(uid){
+        const { error: perr } = await sb.from('profiles').upsert({ uid, nickname: nick });
+        if(perr) console.warn(perr);
+      }
+      if(!data.session){
+        authErr.textContent='가입 완료! 인증 메일을 확인한 뒤 로그인해 주세요.';
+        setAuthMode('login');
+      }
+    } else {
+      const { error } = await sb.auth.signInWithPassword({ email, password: pw });
+      if(error) throw error;
+    }
+  }catch(e){ authErr.textContent = authErrMsg(e.message); }
+  authSubmit.disabled=false;
+});
+logoutBtn.addEventListener('click',()=>sb.auth.signOut());
+
+async function handleUser(user){
+  clearPaintings();
+  if(!user){
+    currentUid=null; viewingUid=null;
+    authOverlay.style.display='flex'; startEl.classList.add('hide');
+    topBar.classList.remove('show'); backToMine.classList.remove('show');
+    slots.fill(null);
+    return;
+  }
+  currentUid=user.id;
+  const { data: prof } = await sb.from('profiles').select('nickname, is_admin').eq('uid', user.id).maybeSingle();
+  meName.textContent = (prof && prof.nickname) ? prof.nickname+'님' : '';
+  isAdmin = !!(prof && prof.is_admin);
+  authOverlay.style.display='none'; topBar.classList.add('show');
+  reopenBtn.style.display='none'; backToMine.classList.remove('show'); viewingUid=null;
+  await loadGallery(currentUid);
+  restoreUI();
+  startEl.classList.remove('hide');
+  if(isAdmin) refreshQuota(); else quotaInfo.textContent='';
+}
+sb.auth.onAuthStateChange((_event, session)=>{ handleUser(session ? session.user : null); });
+
+// ---------- Free-tier storage quota (approximate, whole project) ----------
+const FREE_STORAGE_LIMIT_BYTES = 1024 * 1024 * 1024; // Supabase free plan: 1GB
+let quotaBusy = false;
+async function refreshQuota(){
+  if(!currentUid || !isAdmin || quotaBusy) return;
+  quotaBusy = true;
+  quotaInfo.textContent = '저장공간 확인 중...';
+  try{
+    const { data: folders, error } = await sb.storage.from(BUCKET).list('', { limit: 1000 });
+    if(error) throw error;
+    const userFolders = (folders||[]).filter(f => f.id === null);
+    const sizes = await Promise.all(userFolders.map(async folder=>{
+      const { data: files } = await sb.storage.from(BUCKET).list(folder.name, { limit: 100 });
+      return (files||[]).reduce((sum,f)=> sum + ((f.metadata && f.metadata.size) || 0), 0);
+    }));
+    const totalBytes = sizes.reduce((a,b)=>a+b,0);
+    const usedMB = totalBytes/1024/1024;
+    const pct = Math.min(100, (totalBytes/FREE_STORAGE_LIMIT_BYTES)*100);
+    quotaInfo.textContent = '저장공간 '+pct.toFixed(1)+'% ('+usedMB.toFixed(0)+'MB/1024MB, 근사치)';
+  }catch(e){
+    console.warn('저장공간 확인 실패:',e);
+    quotaInfo.textContent = '';
+  }
+  quotaBusy = false;
+}
 
 function loadImageFile(file){
   return new Promise((res,rej)=>{
     const r=new FileReader();
     r.onload=()=>{ const img=new Image();
       img.onload=()=>{
-        // downscale large photos so 30 fit comfortably in browser storage
+        // downscale large photos so they upload quickly and stay within free-tier storage
         const MAXSIDE=1400;
         let w=img.width, h=img.height;
         const scale=Math.min(1, MAXSIDE/Math.max(w,h));
@@ -235,37 +419,84 @@ function loadImageFile(file){
   });
 }
 hiddenInput.addEventListener('change',async e=>{
-  const f=e.target.files[0]; if(!f||activeSlot<0) return;
+  const f=e.target.files[0]; if(!f||activeSlot<0||!currentUid) return;
   if(!f.type.startsWith('image/')){ alert('이미지 파일만 올릴 수 있어요 (JPG, PNG 등).'); return; }
+  const i=activeSlot;
+  const box=slotsEl.querySelectorAll('.slotBox')[i];
+  const plus=box.querySelector('.slotPlus'); const prevPlus=plus.textContent; plus.textContent='···';
   try{
     const data=await loadImageFile(f);
-    const existingName = slots[activeSlot]?slots[activeSlot].name:'';
-    const nameInput = slotsEl.querySelectorAll('.slotName')[activeSlot];
-    slots[activeSlot]={src:data.src,aspect:data.aspect,name:nameInput.value||existingName||''};
-    const box=slotsEl.querySelectorAll('.slotBox')[activeSlot];
+    const path=currentUid+'/'+i+'.jpg';
+    const blob=dataURLToBlob(data.src);
+    const { error: upErr } = await sb.storage.from(BUCKET).upload(path, blob, { contentType:'image/jpeg', upsert:true });
+    if(upErr) throw upErr;
+    const { data: pub } = sb.storage.from(BUCKET).getPublicUrl(path);
+    const url = pub.publicUrl + '?t=' + Date.now();
+    const existingName = slots[i]?slots[i].name:'';
+    const nameInput = slotsEl.querySelectorAll('.slotName')[i];
+    slots[i]={src:url, path, aspect:data.aspect, name:nameInput.value||existingName||''};
     box.classList.add('filled');
-    box.querySelector('.slotPlus').style.display='none';
+    plus.style.display='none';
     let im=box.querySelector('img'); if(!im){ im=document.createElement('img'); box.insertBefore(im,box.querySelector('.slotDel')); }
-    im.src=data.src;
+    im.src=url;
     updateCount();
     saveSlots();
-  }catch(err){ alert('이 사진을 불러오지 못했어요. 다른 형식(JPG·PNG)으로 시도해 주세요.'); }
+    refreshQuota();
+  }catch(err){ console.warn(err); alert('업로드에 실패했어요. 네트워크를 확인하고 다시 시도해 주세요.'); }
+  finally{ plus.textContent=prevPlus; }
 });
 function filledCount(){ return slots.filter(Boolean).length; }
 function updateCount(){
   const n=filledCount(); countEl.textContent=n+' / '+MAX_PHOTOS+'점';
   enterBtn.classList.toggle('on', n>0);
 }
-enterBtn.addEventListener('click',()=>{ buildPaintings(); startEl.classList.add('hide'); reopenBtn.style.display='block'; });
-reopenBtn.addEventListener('click',()=>{ startEl.classList.remove('hide'); reopenBtn.style.display='none'; });
+enterBtn.addEventListener('click',()=>{ viewingUid=null; buildPaintings(); startEl.classList.add('hide'); reopenBtn.style.display='inline-block'; });
+reopenBtn.addEventListener('click',()=>{ startEl.classList.remove('hide'); });
 document.getElementById('clearAll').addEventListener('click',async()=>{
   if(!confirm('저장된 그림을 모두 지울까요? 되돌릴 수 없어요.')) return;
-  for(let i=0;i<MAX_PHOTOS;i++) slots[i]=null;
-  await clearSaved();
-  const boxes=slotsEl.querySelectorAll('.slotBox'), names=slotsEl.querySelectorAll('.slotName');
-  boxes.forEach(b=>{ b.classList.remove('filled'); b.querySelector('.slotPlus').style.display=''; const im=b.querySelector('img'); if(im) im.remove(); });
-  names.forEach(n=>n.value='');
-  updateCount();
+  const paths=[];
+  for(let i=0;i<MAX_PHOTOS;i++){
+    if(slots[i] && slots[i].path) paths.push(slots[i].path);
+    slots[i]=null;
+  }
+  if(paths.length) sb.storage.from(BUCKET).remove(paths).catch(()=>{});
+  await sb.from('galleries').upsert({ uid: currentUid, slots: [], updated_at: new Date().toISOString() });
+  restoreUI();
+});
+
+// ---------- Browse other galleries ----------
+document.getElementById('browseBtn').addEventListener('click', async ()=>{
+  browseList.innerHTML='불러오는 중...';
+  browseOverlay.classList.remove('hidden2');
+  try{
+    const { data, error } = await sb.from('profiles').select('uid, nickname');
+    if(error) throw error;
+    browseList.innerHTML='';
+    (data||[]).forEach(row=>{
+      if(row.uid===currentUid) return;
+      const nick=row.nickname || '(이름 없음)';
+      const item=document.createElement('div'); item.className='browseItem';
+      item.innerHTML='<span></span><span class="cnt">구경하기 →</span>';
+      item.querySelector('span').textContent=nick;
+      item.addEventListener('click', async ()=>{
+        browseOverlay.classList.add('hidden2');
+        const { data: g } = await sb.from('galleries').select('slots').eq('uid', row.uid).maybeSingle();
+        const arr = (g && g.slots) || [];
+        const viewSlots=new Array(MAX_PHOTOS).fill(null);
+        for(let j=0;j<MAX_PHOTOS;j++) viewSlots[j]=arr[j]||null;
+        viewingUid=row.uid;
+        startEl.classList.add('hide'); reopenBtn.style.display='none'; backToMine.classList.add('show');
+        buildPaintings(viewSlots);
+      });
+      browseList.appendChild(item);
+    });
+    if(!browseList.children.length) browseList.innerHTML='<div style="opacity:.6;text-align:center;padding:20px;">아직 다른 사람이 없어요.</div>';
+  }catch(e){ console.warn(e); browseList.innerHTML='불러오기 실패'; }
+});
+document.getElementById('browseClose').addEventListener('click',()=>browseOverlay.classList.add('hidden2'));
+backToMine.addEventListener('click',()=>{
+  viewingUid=null; backToMine.classList.remove('show'); reopenBtn.style.display='inline-block';
+  buildPaintings(slots);
 });
 
 // ================= 3D Gallery =================
@@ -344,9 +575,10 @@ function placePainting(p,x,y,z,ry,idx){
 }
 function clearPaintings(){ paintingGroups.forEach(g=>scene.remove(g)); spots.forEach(s=>scene.remove(s)); paintingGroups=[];clickable=[];spots=[]; }
 
-function buildPaintings(){
+function buildPaintings(srcSlots){
+  srcSlots = srcSlots || slots;
   clearPaintings();
-  const items=slots.filter(Boolean);
+  const items=srcSlots.filter(Boolean);
   const n=items.length; if(n===0) return;
   const perWall=Math.ceil(n/2);
   ROOM_D=Math.max(18, perWall*SPACING + 4);
@@ -363,27 +595,15 @@ function buildPaintings(){
   clearTimeout(helpTimer); helpTimer=setTimeout(()=>{document.getElementById('help').style.opacity='0';},7000);
 }
 
-// ---------- Cute character ----------
-const hero=new THREE.Group();
-const bodyMat=new THREE.MeshStandardMaterial({color:0xff9c5b,roughness:0.6});
-const bellyMat=new THREE.MeshStandardMaterial({color:0xffe0c2,roughness:0.7});
-const darkMat=new THREE.MeshStandardMaterial({color:0x2e2a26,roughness:0.5});
-const whiteMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:0.4});
-const cheekMat=new THREE.MeshStandardMaterial({color:0xff8f8f,roughness:0.7});
-const body=new THREE.Mesh(new THREE.SphereGeometry(0.42,24,20),bodyMat); body.scale.set(1,1.15,1); body.position.y=0.5; hero.add(body);
-const belly=new THREE.Mesh(new THREE.SphereGeometry(0.3,20,16),bellyMat); belly.scale.set(0.8,1,0.5); belly.position.set(0,0.45,0.24); hero.add(belly);
-const head=new THREE.Mesh(new THREE.SphereGeometry(0.36,24,20),bodyMat); head.position.y=1.12; hero.add(head);
-const earGeo=new THREE.SphereGeometry(0.12,16,12);
-[[-0.24],[0.24]].forEach(([ex])=>{const e=new THREE.Mesh(earGeo,bodyMat);e.position.set(ex,1.4,0);e.scale.set(1,1.2,0.8);hero.add(e);
-  const i=new THREE.Mesh(earGeo,cheekMat);i.position.set(ex,1.4,0.05);i.scale.set(0.6,0.8,0.6);hero.add(i);});
-function eye(x){const w=new THREE.Mesh(new THREE.SphereGeometry(0.075,14,12),whiteMat);w.position.set(x,1.16,0.3);w.scale.set(1,1.2,0.6);hero.add(w);
-  const p=new THREE.Mesh(new THREE.SphereGeometry(0.04,12,10),darkMat);p.position.set(x,1.15,0.35);hero.add(p);}
-eye(-0.13);eye(0.13);
-[[-0.22],[0.22]].forEach(([cx])=>{const c=new THREE.Mesh(new THREE.SphereGeometry(0.05,12,10),cheekMat);c.position.set(cx,1.06,0.29);c.scale.set(1,0.7,0.4);hero.add(c);});
-const nose=new THREE.Mesh(new THREE.SphereGeometry(0.035,12,10),darkMat);nose.position.set(0,1.06,0.36);hero.add(nose);
-[[-0.18],[0.18]].forEach(([fx])=>{const f=new THREE.Mesh(new THREE.SphereGeometry(0.13,14,12),bellyMat);f.position.set(fx,0.1,0.05);f.scale.set(1,0.6,1.3);hero.add(f);});
-[[-0.44],[0.44]].forEach(([ax])=>{const a=new THREE.Mesh(new THREE.SphereGeometry(0.1,12,10),bodyMat);a.position.set(ax,0.55,0.05);a.scale.set(0.8,1.4,0.8);hero.add(a);});
-hero.position.set(0,0,15); let heroYaw=Math.PI; hero.rotation.y=heroYaw; scene.add(hero);
+// ---------- Character (billboard sprite) ----------
+const heroTex=new THREE.TextureLoader().load('character.png');
+if('SRGBColorSpace' in THREE) heroTex.colorSpace=THREE.SRGBColorSpace;
+const heroMat=new THREE.SpriteMaterial({map:heroTex,transparent:true});
+const hero=new THREE.Sprite(heroMat);
+const HERO_H=1.7, HERO_ASPECT=526/460;
+hero.scale.set(HERO_H*HERO_ASPECT,HERO_H,1);
+hero.center.set(0.5,0); // anchor at the character's feet
+hero.position.set(0,0,15); let heroYaw=Math.PI; scene.add(hero);
 const blob=new THREE.Mesh(new THREE.CircleGeometry(0.4,24),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:0.18}));
 blob.rotation.x=-Math.PI/2; blob.position.y=0.02; scene.add(blob);
 
@@ -442,10 +662,9 @@ function loop(now){
     hero.position.z+=(cosY*fwd + sinY*strafe)*SPEED*dt;
     hero.position.x=Math.max(-HALF_W,Math.min(HALF_W,hero.position.x));
     hero.position.z=Math.max(-HALF_D,Math.min(HALF_D,hero.position.z));
-    hero.rotation.y=Math.atan2(sinY*fwd - cosY*strafe, cosY*fwd + sinY*strafe);
-  } else { hero.rotation.y=heroYaw; }
-  if(moving){walkT+=dt*10;hero.position.y=Math.abs(Math.sin(walkT))*0.06;hero.rotation.z=Math.sin(walkT)*0.05;}
-  else {hero.position.y*=0.8;hero.rotation.z*=0.8;}
+  }
+  if(moving){walkT+=dt*10;hero.position.y=Math.abs(Math.sin(walkT))*0.06;heroMat.rotation=Math.sin(walkT)*0.05;}
+  else {hero.position.y*=0.8;heroMat.rotation*=0.8;}
   blob.position.set(hero.position.x,0.02,hero.position.z);
   updateCamera(); renderer.render(scene,camera); requestAnimationFrame(loop);
 }
