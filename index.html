@@ -95,6 +95,14 @@
   #authSubmit { width:100%; background:linear-gradient(180deg,#e8c766,#c9a24a); color:#2a1418; border:none;
     font-size:15px; font-weight:700; padding:12px; border-radius:999px; cursor:pointer; margin-top:4px; }
   #authSubmit:disabled { opacity:0.5; pointer-events:none; }
+  #teacherNoteToggle { text-align:center; font-size:11.5px; color:rgba(242,233,216,0.5);
+    margin-top:14px; cursor:pointer; text-decoration:underline; -webkit-tap-highlight-color:transparent; }
+  #teacherNote { display:none; margin-top:10px; background:rgba(255,255,255,0.05);
+    border:1px solid rgba(201,162,74,0.25); border-radius:10px; padding:12px 14px;
+    font-size:11.5px; line-height:1.6; color:rgba(242,233,216,0.85); text-align:left; }
+  #teacherNote.show { display:block; }
+  #teacherNote ul { margin:0; padding-left:16px; }
+  #teacherNote li { margin-bottom:5px; }
 
   /* ---------- Top bar / browse ---------- */
   #topBar { position:fixed; right:20px; top:16px; z-index:8; display:none; gap:8px; align-items:center; }
@@ -154,6 +162,16 @@
     <input class="authInput" id="authPw" type="password" placeholder="비밀번호 (6자 이상)" autocomplete="current-password">
     <div id="authErr"></div>
     <button id="authSubmit">로그인</button>
+    <div id="teacherNoteToggle">선생님 안내사항 보기</div>
+    <div id="teacherNote">
+      <ul>
+        <li>이메일은 실제 메일이 아니어도 가입돼요 (인증 절차 없음). 다만 로그인 아이디로 쓰이니 학생들이 잊지 않게 적어두게 해주세요.</li>
+        <li><b>비밀번호 찾기 기능이 없어요.</b> 잊어버리면 그 계정은 복구할 수 없으니 꼭 메모해두게 안내해주세요.</li>
+        <li>사진은 1인당 최대 30장까지 올릴 수 있고, 업로드하면 자동으로 압축돼요.</li>
+        <li>"다른 갤러리 구경" 기능으로 서로의 작품을 볼 수 있어요. 부적절한 사진이 올라가지 않도록 미리 지도해주세요.</li>
+        <li>닉네임은 다른 사람에게 그대로 공개돼요. 실명보다는 별명 사용을 권장해요.</li>
+      </ul>
+    </div>
   </div>
 </div>
 
@@ -324,6 +342,9 @@ function authErrMsg(msg){
   if(msg.includes('Email not confirmed')) return '이메일 인증 메일을 확인한 뒤 로그인해 주세요.';
   return msg;
 }
+document.getElementById('teacherNoteToggle').addEventListener('click', ()=>{
+  document.getElementById('teacherNote').classList.toggle('show');
+});
 authSubmit.addEventListener('click', async ()=>{
   const email=authEmail.value.trim(), pw=authPw.value, nick=authNick.value.trim();
   authErr.textContent=''; authSubmit.disabled=true;
