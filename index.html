@@ -615,6 +615,10 @@ fringe.scale.set(1,0.5,0.7); fringe.position.set(0,1.66,0.18); hero.add(fringe);
 function eyeDot(x){const p=new THREE.Mesh(new THREE.SphereGeometry(0.028,10,8),hairMat);p.position.set(x,1.56,0.30);hero.add(p);}
 eyeDot(-0.11); eyeDot(0.11);
 [[-0.19],[0.19]].forEach(([cx])=>{const c=new THREE.Mesh(new THREE.SphereGeometry(0.045,10,8),cheekMat);c.position.set(cx,1.48,0.27);c.scale.set(1,0.7,0.4);hero.add(c);});
+const nose=new THREE.Mesh(new THREE.SphereGeometry(0.022,10,8),new THREE.MeshStandardMaterial({color:0xe0a97e,roughness:0.7}));
+nose.position.set(0,1.505,0.315); hero.add(nose);
+const mouth=new THREE.Mesh(new THREE.SphereGeometry(0.045,12,8),new THREE.MeshStandardMaterial({color:0x9a5a54,roughness:0.6}));
+mouth.scale.set(1,0.35,0.5); mouth.position.set(0,1.46,0.305); hero.add(mouth);
 
 function makeLeg(x){
   const pivot=new THREE.Group(); pivot.position.set(x,0.62,0);
@@ -626,32 +630,18 @@ function makeLeg(x){
 }
 const legL=makeLeg(-0.14), legR=makeLeg(0.14);
 
-function makeArm(x,extended){
+function makeArm(x){
   const shoulder=new THREE.Group(); shoulder.position.set(x,1.22,0);
-  const pose=new THREE.Group();
-  if(extended) pose.rotation.z=-Math.PI/2+0.35;
   const upper=new THREE.Mesh(new THREE.CylinderGeometry(0.075,0.065,0.3,10),shirtMat);
-  upper.position.y=-0.15; pose.add(upper);
+  upper.position.y=-0.15; shoulder.add(upper);
   const hand=new THREE.Mesh(new THREE.SphereGeometry(0.085,12,10),skinMat);
-  hand.position.y=-0.32; pose.add(hand);
-  shoulder.add(pose); hero.add(shoulder); return shoulder;
+  hand.position.y=-0.32; shoulder.add(hand);
+  hero.add(shoulder); return shoulder;
 }
-const armL=makeArm(-0.32,false);
-const armR=makeArm(0.32,true); // gestures toward the nearest painting each frame
+const armL=makeArm(-0.32);
+const armR=makeArm(0.32);
 
 hero.position.set(0,0,15); let heroYaw=Math.PI; hero.rotation.y=heroYaw; scene.add(hero);
-function nearestPaintingLocalAngle(){
-  if(!paintingGroups.length) return 0;
-  let nearest=null,nd=Infinity;
-  for(const g of paintingGroups){
-    const dx=g.position.x-hero.position.x, dz=g.position.z-hero.position.z;
-    const d=dx*dx+dz*dz;
-    if(d<nd){nd=d; nearest=g;}
-  }
-  const dx=nearest.position.x-hero.position.x, dz=nearest.position.z-hero.position.z;
-  const raw=Math.atan2(dx,dz)-hero.rotation.y;
-  return Math.atan2(Math.sin(raw),Math.cos(raw)); // normalize to [-PI,PI]
-}
 const blob=new THREE.Mesh(new THREE.CircleGeometry(0.4,24),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:0.18}));
 blob.rotation.x=-Math.PI/2; blob.position.y=0.02; scene.add(blob);
 
@@ -716,13 +706,11 @@ function loop(now){
     walkT+=dt*10;
     hero.position.y=Math.abs(Math.sin(walkT))*0.05;
     legL.rotation.x=Math.sin(walkT)*0.6; legR.rotation.x=-Math.sin(walkT)*0.6;
-    armL.rotation.x=-Math.sin(walkT)*0.45;
+    armL.rotation.x=-Math.sin(walkT)*0.45; armR.rotation.x=Math.sin(walkT)*0.45;
   } else {
     hero.position.y*=0.8;
-    legL.rotation.x*=0.8; legR.rotation.x*=0.8; armL.rotation.x*=0.8;
+    legL.rotation.x*=0.8; legR.rotation.x*=0.8; armL.rotation.x*=0.8; armR.rotation.x*=0.8;
   }
-  const pointAngle=nearestPaintingLocalAngle();
-  armR.rotation.y+=(THREE.MathUtils.clamp(pointAngle,-2.3,0.9)-armR.rotation.y)*Math.min(1,dt*6);
   blob.position.set(hero.position.x,0.02,hero.position.z);
   updateCamera(); renderer.render(scene,camera); requestAnimationFrame(loop);
 }
