@@ -129,6 +129,29 @@
     color:#f2e9d8; border:1px solid rgba(201,162,74,0.4); font-size:12.5px; font-weight:500;
     padding:7px 14px; border-radius:999px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
   #backToMine.show { display:block; }
+
+  /* ---------- Student upload (class code) ---------- */
+  body.student .slotDel { display:none !important; }
+  #classModal { position:fixed; inset:0; z-index:45; display:flex; align-items:center; justify-content:center;
+    background:rgba(15,8,10,0.9); padding:20px; }
+  #classModal.hidden { display:none; }
+  #classCard { width:min(94vw,380px); background:rgba(30,16,20,0.95); border:1px solid rgba(201,162,74,0.4);
+    border-radius:20px; padding:26px 24px; color:#f2e9d8; box-shadow:0 30px 80px rgba(0,0,0,0.5); text-align:center; }
+  #classCard h1 { font-size:20px; font-weight:700; margin-bottom:6px; }
+  #classCard p { font-size:12.5px; line-height:1.55; opacity:0.82; margin-bottom:16px; }
+  #qrBox { display:flex; align-items:center; justify-content:center; background:#fff; border-radius:12px;
+    padding:12px; width:200px; height:200px; margin:0 auto 12px; }
+  #qrBox img, #qrBox canvas { width:176px !important; height:176px !important; }
+  #classCodeText { font-size:22px; font-weight:700; letter-spacing:3px; color:#e8c766; margin-bottom:6px; }
+  #classLinkText { font-size:11px; opacity:0.6; word-break:break-all; margin-bottom:14px; }
+  #classCard .row { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:10px; }
+  #classCard button { background:rgba(245,235,215,0.14); color:#f2e9d8; border:1px solid rgba(201,162,74,0.4);
+    font-size:12.5px; font-weight:500; padding:9px 14px; border-radius:999px; cursor:pointer; }
+  #classCard button.primary { background:linear-gradient(180deg,#e8c766,#c9a24a); color:#2a1418; font-weight:700; border:none; }
+  #classOpenRow { display:flex; align-items:center; justify-content:center; gap:8px; font-size:12.5px;
+    margin-bottom:14px; opacity:0.9; }
+  #classOpenRow input { width:16px; height:16px; }
+  #classBusy { font-size:12px; opacity:0.7; min-height:16px; margin-bottom:8px; }
 </style>
 </head>
 <body>
@@ -145,10 +168,31 @@
   <span id="meName"></span>
   <span id="quotaInfo"></span>
   <button class="topBtn" id="reopen">＋ 그림 관리</button>
+  <button class="topBtn" id="classBtn">학생 업로드</button>
   <button class="topBtn" id="browseBtn">다른 갤러리 구경</button>
   <button class="topBtn" id="logoutBtn">로그아웃</button>
 </div>
 <button id="backToMine">← 내 갤러리로</button>
+
+<div id="classModal" class="hidden">
+  <div id="classCard">
+    <h1>학생 업로드</h1>
+    <p>학생들에게 이 QR(또는 코드)을 보여주면, 로그인 없이 각자 출석번호 칸에 그림을 올릴 수 있어요. 올라온 그림은 이 계정에 저장됩니다.</p>
+    <div id="classBusy"></div>
+    <div id="qrBox"></div>
+    <div id="classCodeText"></div>
+    <div id="classLinkText"></div>
+    <div id="classOpenRow"><input type="checkbox" id="classOpen"><label for="classOpen">지금 업로드 받는 중</label></div>
+    <div class="row">
+      <button id="classCopy">링크 복사</button>
+      <button id="classRegen">코드 새로 만들기</button>
+    </div>
+    <div class="row">
+      <button id="classCreate" class="primary">업로드 코드 만들기</button>
+      <button id="classClose">닫기</button>
+    </div>
+  </div>
+</div>
 
 <div id="authOverlay">
   <div id="authCard">
@@ -199,6 +243,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 /**
  * @license
@@ -213,6 +258,15 @@
 const MAX_PHOTOS = 30;
 // slots[i] = { src, path, aspect, name } or null
 const slots = new Array(MAX_PHOTOS).fill(null);
+
+// ---------- Student upload mode (opened via ?class=CODE) ----------
+// When a URL carries ?class=CODE the page runs without login: the visitor picks
+// an attendance-number slot and uploads straight into the teacher's gallery,
+// routed through the `class-upload` Edge Function (service role) so no per-student
+// account is needed. Teachers still use the normal login flow.
+const CLASS_CODE = new URLSearchParams(location.search).get('class');
+const STUDENT_MODE = !!CLASS_CODE;
+if (STUDENT_MODE) document.body.classList.add('student');
 
 // ---------- Supabase ----------
 // TODO: Supabase 콘솔(supabase.com) > 프로젝트 > Project Settings > API 에서 발급받은 값으로 교체하세요.
@@ -248,6 +302,7 @@ const tabLogin=document.getElementById('tabLogin'), tabSignup=document.getElemen
 const authNick=document.getElementById('authNick'), authEmail=document.getElementById('authEmail'), authPw=document.getElementById('authPw');
 const authErr=document.getElementById('authErr'), authSubmit=document.getElementById('authSubmit');
 const browseOverlay=document.getElementById('browse'), browseList=document.getElementById('browseList');
+const classBtn=document.getElementById('classBtn'), classModal=document.getElementById('classModal');
 
 // build 30 slots
 const hiddenInput=document.createElement('input');
@@ -262,7 +317,7 @@ function makeSlot(i){
                 '<button class="slotDel" title="삭제">×</button>';
   const name=document.createElement('input'); name.className='slotName'; name.type='text';
   name.placeholder='작품 이름'; name.maxLength=24; name.dataset.i=i;
-  name.addEventListener('input',()=>{ if(slots[i]){ slots[i].name=name.value; saveSlots(); } });
+  name.addEventListener('input',()=>{ if(slots[i]){ slots[i].name=name.value; if(STUDENT_MODE) studentSaveName(i); else saveSlots(); } });
   box.addEventListener('click',e=>{
     if(e.target.classList.contains('slotDel')) return;
     activeSlot=i; hiddenInput.value=''; hiddenInput.click();
@@ -321,6 +376,54 @@ function saveSlots(){
       updated_at: new Date().toISOString()
     }).then(({error})=>{ if(error) console.warn('저장 실패:',error); });
   }, 500);
+}
+
+// ---------- Student upload: class-code helpers ----------
+let classTeacherUid=null;
+function classLink(code){ return location.origin + location.pathname + '?class=' + code; }
+
+// Debounced "artwork name" sync for students (image stays put, only the label changes).
+const nameTimers = {};
+function studentSaveName(i){
+  if(!slots[i]) return;
+  clearTimeout(nameTimers[i]);
+  nameTimers[i] = setTimeout(async ()=>{
+    const { data, error } = await sb.functions.invoke('class-upload', {
+      body: { code: CLASS_CODE, slot: i, name: slots[i] ? slots[i].name : '' }
+    });
+    if(error || (data && data.error)) console.warn('이름 저장 실패:', error || data.error);
+  }, 700);
+}
+
+async function initStudentMode(){
+  authOverlay.style.display='none';
+  document.getElementById('clearAll').style.display='none';
+  quotaInfo.textContent=''; logoutBtn.style.display='none';
+  reopenBtn.style.display='none'; classBtn.style.display='none';
+  const cardP = document.querySelector('#card p');
+  cardP.textContent = '불러오는 중...';
+  startEl.classList.remove('hide');
+
+  const { data, error } = await sb.functions.invoke('class-info', { body: { code: CLASS_CODE } });
+  if(error || !data || data.error){
+    cardP.textContent = (data && data.error) || '이 링크가 유효하지 않아요. 선생님께 새 QR을 요청하세요.';
+    document.getElementById('slots').style.display='none';
+    document.getElementById('bar').style.display='none';
+    return;
+  }
+
+  const h1 = document.querySelector('#card h1');
+  h1.textContent = (data.nickname ? data.nickname + ' 선생님 반 ' : '우리 반 ');
+  const sp = document.createElement('span'); sp.className='gold'; sp.textContent='미술관'; h1.appendChild(sp);
+  cardP.textContent = '내 출석번호 칸을 눌러 그림을 올리고, 그 아래에 작품 이름을 적으세요. 저장은 자동입니다.';
+
+  classTeacherUid = data.uid || null;
+  const arr = Array.isArray(data.slots) ? data.slots : [];
+  for(let i=0;i<MAX_PHOTOS;i++) slots[i] = arr[i] || null;
+  restoreUI();
+
+  meName.textContent = data.nickname ? data.nickname + ' 선생님 반' : '';
+  topBar.classList.add('show');
 }
 
 // ---------- Auth ----------
@@ -391,7 +494,93 @@ async function handleUser(user){
   startEl.classList.remove('hide');
   if(isAdmin) refreshQuota(); else quotaInfo.textContent='';
 }
-sb.auth.onAuthStateChange((_event, session)=>{ handleUser(session ? session.user : null); });
+if(STUDENT_MODE){
+  initStudentMode();
+} else {
+  sb.auth.onAuthStateChange((_event, session)=>{ handleUser(session ? session.user : null); });
+}
+
+// ---------- Teacher: manage the student-upload code ----------
+const classBusy=document.getElementById('classBusy');
+const qrBox=document.getElementById('qrBox');
+const classCodeText=document.getElementById('classCodeText');
+const classLinkText=document.getElementById('classLinkText');
+const classOpen=document.getElementById('classOpen');
+const classCreate=document.getElementById('classCreate');
+const classRegen=document.getElementById('classRegen');
+const classCopy=document.getElementById('classCopy');
+let classCodeVal=null;
+
+function genCode(){
+  const chars='ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // 헷갈리는 0/O/1/I/L 제외
+  let c=''; for(let i=0;i<6;i++) c+=chars[Math.floor(Math.random()*chars.length)];
+  return c;
+}
+function renderClassCode(){
+  const has=!!classCodeVal;
+  classCreate.style.display = has ? 'none' : '';
+  classRegen.style.display = has ? '' : 'none';
+  classCopy.style.display = has ? '' : 'none';
+  document.getElementById('classOpenRow').style.display = has ? 'flex' : 'none';
+  qrBox.innerHTML='';
+  if(has){
+    const link=classLink(classCodeVal);
+    classCodeText.textContent=classCodeVal;
+    classLinkText.textContent=link;
+    if(typeof QRCode!=='undefined'){
+      new QRCode(qrBox,{ text:link, width:176, height:176, colorDark:'#2a1418', colorLight:'#ffffff',
+        correctLevel: QRCode.CorrectLevel.M });
+    } else {
+      qrBox.textContent='QR을 만들 수 없어요. 아래 코드를 불러주세요.';
+    }
+  } else {
+    classCodeText.textContent='';
+    classLinkText.textContent='아직 만들지 않았어요.';
+  }
+}
+classBtn.addEventListener('click', async ()=>{
+  classModal.classList.remove('hidden');
+  classBusy.textContent='불러오는 중...';
+  const { data } = await sb.from('class_codes').select('code,is_open').eq('uid', currentUid).maybeSingle();
+  classBusy.textContent='';
+  classCodeVal = data ? data.code : null;
+  classOpen.checked = data ? !!data.is_open : true;
+  renderClassCode();
+});
+document.getElementById('classClose').addEventListener('click',()=>classModal.classList.add('hidden'));
+classModal.addEventListener('click',e=>{ if(e.target===classModal) classModal.classList.add('hidden'); });
+classCreate.addEventListener('click', async ()=>{
+  classBusy.textContent='만드는 중...';
+  const code=genCode();
+  const { error } = await sb.from('class_codes').upsert({ uid: currentUid, code, is_open: true });
+  classBusy.textContent = error ? '실패: '+error.message : '';
+  if(!error){ classCodeVal=code; classOpen.checked=true; renderClassCode(); }
+});
+classRegen.addEventListener('click', async ()=>{
+  if(!confirm('코드를 새로 만들면 지금 나눠준 QR·링크는 더 이상 작동하지 않아요. 계속할까요?')) return;
+  classBusy.textContent='만드는 중...';
+  const code=genCode();
+  const { error } = await sb.from('class_codes').upsert({ uid: currentUid, code, is_open: classOpen.checked });
+  classBusy.textContent = error ? '실패: '+error.message : '';
+  if(!error){ classCodeVal=code; renderClassCode(); }
+});
+classOpen.addEventListener('change', async ()=>{
+  if(!classCodeVal) return;
+  const { error } = await sb.from('class_codes').update({ is_open: classOpen.checked }).eq('uid', currentUid);
+  if(error){ classBusy.textContent='실패: '+error.message; classOpen.checked=!classOpen.checked; }
+});
+classCopy.addEventListener('click', ()=>{
+  if(!classCodeVal) return;
+  const link=classLink(classCodeVal);
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(link).then(
+      ()=>{ classBusy.textContent='링크를 복사했어요.'; setTimeout(()=>classBusy.textContent='',1500); },
+      ()=>{ classBusy.textContent='복사 실패 — 아래 주소를 길게 눌러 복사하세요.'; }
+    );
+  } else {
+    classBusy.textContent='복사 불가 — 아래 주소를 길게 눌러 복사하세요.';
+  }
+});
 
 // ---------- Free-tier storage quota (approximate, whole project) ----------
 const FREE_STORAGE_LIMIT_BYTES = 1024 * 1024 * 1024; // Supabase free plan: 1GB
@@ -440,29 +629,40 @@ function loadImageFile(file){
   });
 }
 hiddenInput.addEventListener('change',async e=>{
-  const f=e.target.files[0]; if(!f||activeSlot<0||!currentUid) return;
+  const f=e.target.files[0]; if(!f||activeSlot<0) return;
+  if(!STUDENT_MODE && !currentUid) return;
   if(!f.type.startsWith('image/')){ alert('이미지 파일만 올릴 수 있어요 (JPG, PNG 등).'); return; }
   const i=activeSlot;
+  if(STUDENT_MODE && slots[i] && !confirm((i+1)+'번 칸에 이미 그림이 있어요. 새 그림으로 바꿀까요?')) return;
   const box=slotsEl.querySelectorAll('.slotBox')[i];
   const plus=box.querySelector('.slotPlus'); const prevPlus=plus.textContent; plus.textContent='···';
   try{
     const data=await loadImageFile(f);
-    const path=currentUid+'/'+i+'.jpg';
-    const blob=dataURLToBlob(data.src);
-    const { error: upErr } = await sb.storage.from(BUCKET).upload(path, blob, { contentType:'image/jpeg', upsert:true });
-    if(upErr) throw upErr;
-    const { data: pub } = sb.storage.from(BUCKET).getPublicUrl(path);
-    const url = pub.publicUrl + '?t=' + Date.now();
     const existingName = slots[i]?slots[i].name:'';
     const nameInput = slotsEl.querySelectorAll('.slotName')[i];
-    slots[i]={src:url, path, aspect:data.aspect, name:nameInput.value||existingName||''};
+    const name = nameInput.value || existingName || '';
+    let url, path;
+    if(STUDENT_MODE){
+      const { data: res, error } = await sb.functions.invoke('class-upload', {
+        body: { code: CLASS_CODE, slot: i, name, imageBase64: data.src, aspect: data.aspect }
+      });
+      if(error || !res || res.error) throw new Error((res && res.error) || (error && error.message) || '업로드 실패');
+      url = res.url; path = res.path || null;
+    } else {
+      path = currentUid+'/'+i+'.jpg';
+      const blob=dataURLToBlob(data.src);
+      const { error: upErr } = await sb.storage.from(BUCKET).upload(path, blob, { contentType:'image/jpeg', upsert:true });
+      if(upErr) throw upErr;
+      const { data: pub } = sb.storage.from(BUCKET).getPublicUrl(path);
+      url = pub.publicUrl + '?t=' + Date.now();
+    }
+    slots[i]={src:url, path, aspect:data.aspect, name};
     box.classList.add('filled');
     plus.style.display='none';
     let im=box.querySelector('img'); if(!im){ im=document.createElement('img'); box.insertBefore(im,box.querySelector('.slotDel')); }
     im.src=url;
     updateCount();
-    saveSlots();
-    refreshQuota();
+    if(!STUDENT_MODE){ saveSlots(); refreshQuota(); }
   }catch(err){ console.warn(err); alert('업로드에 실패했어요. 네트워크를 확인하고 다시 시도해 주세요.'); }
   finally{ plus.textContent=prevPlus; }
 });
@@ -494,7 +694,7 @@ document.getElementById('browseBtn').addEventListener('click', async ()=>{
     if(error) throw error;
     browseList.innerHTML='';
     (data||[]).forEach(row=>{
-      if(row.uid===currentUid) return;
+      if(row.uid===currentUid || row.uid===classTeacherUid) return;
       const nick=row.nickname || '(이름 없음)';
       const item=document.createElement('div'); item.className='browseItem';
       item.innerHTML='<span></span><span class="cnt">구경하기 →</span>';
